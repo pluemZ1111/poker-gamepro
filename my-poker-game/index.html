@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Elite: Grand Casino</title>
+    <style>
+        :root { --gold: #ffd700; --felt: radial-gradient(circle, #1a472a 0%, #0d2b1a 100%); --wood: #3e2723; }
+        body { background: #000; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; height: 100vh; }
+        
+        /* Overlay Screens */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: 0.5s; text-align: center; }
+        .box { background: var(--wood); padding: 30px; border-radius: 20px; border: 3px solid var(--gold); max-width: 500px; box-shadow: 0 0 50px rgba(255,215,0,0.2); }
+        
+        /* Rules Table */
+        .rules-content { text-align: left; font-size: 0.85rem; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin: 15px 0; max-height: 250px; overflow-y: auto; }
+        .rules-content b { color: var(--gold); }
+
+        /* HUD */
+        .hud { width: 100%; background: #111; padding: 15px 0; display: flex; justify-content: center; gap: 30px; border-bottom: 3px solid var(--wood); font-size: 1.1rem; }
+        .hud b { color: var(--gold); }
+
+        /* Game Table */
+        .table-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%; padding: 20px; }
+        .table { width: 95%; max-width: 900px; height: 420px; background: var(--felt); border: 15px solid var(--wood); border-radius: 200px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: space-around; box-shadow: inset 0 0 120px #000; }
+
+        /* Cards */
+        .card-row { display: flex; gap: 10px; height: 100px; }
+        .card { width: 70px; height: 100px; background: white; color: black; border-radius: 8px; font-size: 1.5rem; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 2px 4px 15px rgba(0,0,0,0.5); position: relative; transition: 0.3s; }
+        .card.red { color: #d32f2f; }
+        .card.back { background: linear-gradient(135deg, #b71c1c 0%, #4a0000 100%); border: 2px solid white; }
+        
+        /* Control Panel */
+        .control-panel { background: #1a1a1a; width: 100%; padding: 20px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; border-top: 3px solid var(--wood); }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .btn { padding: 12px 25px; border-radius: 30px; border: none; font-size: 0.9rem; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn-gold { background: var(--gold); color: black; }
+        .btn-blue { background: #2196f3; color: white; }
+        .btn-red { background: #f44336; color: white; }
+        .btn-purple { background: #9c27b0; color: white; }
+        .btn:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .btn:disabled { background: #444; color: #777; }
+        
+        input[type="number"] { padding: 10px; border-radius: 8px; border: 1px solid var(--gold); background: #333; color: white; width: 80px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<audio id="bgm" loop>
+    <source src="pinggggg.mp3" type="audio/mpeg">
+</audio>
+
+<div id="start-screen" class="overlay">
+    <div class="box">
+        <h1 style="color: var(--gold); margin-bottom: 5px;">GRAND CASINO POKER</h1>
+        <p>ยินดีต้อนรับสู่โต๊ะ VIP</p>
+        
+        <div class="rules-content">
+            <b>📜 กฎการเล่น (No-Ten Rules):</b><br>
+            1. สำรับไพ่พิเศษ: มีเลข <b>2-9 และ J, Q, K, A</b> (ไม่มีเลข 10)<br>
+            2. การลำดับ: A > K > Q > J > 9 > 8... (9 ข้ามไป J)<br>
+            3. <b>Check:</b> ผ่านเพื่อดูไพ่ใบถัดไปโดยไม่ลงเงิน<br>
+            4. <b>Bet:</b> วางเดิมพันเพิ่ม บอทจะลงเงินสู้ตามเสมอ<br>
+            5. <b>All In:</b> ทุ่มหมดหน้าตักเพื่อรับรางวัลสูงสุด<br>
+            6. <b>Restart:</b> หากเงินหมด กดปุ่มสีแดงเพื่อรีเซ็ตชิป
+        </div>
+
+        <input type="text" id="username-input" placeholder="ระบุชื่อของคุณ" maxlength="10">
+        <br><br>
+        <button class="btn btn-gold" onclick="startGame()">เข้าสู่เกม & เปิดเพลงดนตรี</button>
+    </div>
+</div>
+
+<div class="hud">
+    <div>👤 ผู้เล่น: <span id="display-name">Guest</span></div>
+    <div>💰 ชิป: <b id="balance">1000</b></div>
+    <div>🍯 กองกลาง: <b id="pot">0</b></div>
+</div>
+
+<div class="table-area">
+    <div class="table">
+        <div class="card-row" id="bot-hand"></div>
+        <div id="status" style="font-size: 1.5rem; font-weight: bold; color: var(--gold); text-align: center; text-shadow: 2px 2px 4px #000;">วางเดิมพันเพื่อเริ่ม</div>
+        <div class="card-row" id="community"></div>
+        <div class="card-row" id="player-hand"></div>
+    </div>
+</div>
+
+<div class="control-panel">
+    <div id="bet-area" style="display:none; margin-bottom: 10px;">
+        <span>Bet Amount: $</span>
+        <input type="number" id="bet-amount" value="50" min="10" step="10">
+    </div>
+    <div class="btn-group">
+        <button id="btn-start" class="btn btn-gold" onclick="initRound()">เริ่มตาใหม่ ($100)</button>
+        <button id="btn-restart" class="btn btn-red" onclick="resetGame()">เริ่มเกมใหม่ (RESET)</button>
+        
+        <button id="btn-check" class="btn btn-blue" onclick="action('check')" style="display:none;">CHECK</button>
+        <button id="btn-bet" class="btn btn-gold" onclick="action('bet')" style="display:none;">BET / CALL</button>
+        <button id="btn-allin" class="btn btn-purple" onclick="action('allin')" style="display:none;">ALL IN!</button>
+        <button id="btn-fold" class="btn btn-red" onclick="action('fold')" style="display:none;">FOLD</button>
+    </div>
+</div>
+
+<script>
+    const RANKS = ["2","3","4","5","6","7","8","9","J","Q","K","A"];
+    const SUITS = { 'H': '♥', 'D': '♦', 'C': '♣', 'S': '♠' };
+    let balance = 1000, pot = 0, deck = [], pHand = [], bHand = [], comm = [], phase = 0;
+
+    function startGame() {
+        const name = document.getElementById('username-input').value;
+        if (!name) return alert("กรุณาระบุชื่อของคุณ!");
+        document.getElementById('display-name').innerText = name;
+        document.getElementById('start-screen').style.display = "none";
+        
+        // เล่นเพลง
+        const bgm = document.getElementById('bgm');
+        bgm.volume = 0.3;
+        bgm.play().catch(e => console.log("Music play blocked by browser"));
+    }
+
+    function buildDeck() {
+        deck = [];
+        for(let r of RANKS) for(let s in SUITS) deck.push({r, s, v: RANKS.indexOf(r)});
+        deck.sort(() => Math.random() - 0.5);
+    }
+
+    function initRound() {
+        if (balance < 100) return alert("เงินไม่พอ! กรุณากดปุ่ม RESET");
+        balance -= 100; pot = 200; phase = 0;
+        buildDeck();
+        pHand = [deck.pop(), deck.pop()]; bHand = [deck.pop(), deck.pop()];
+        comm = Array.from({length:5}, () => deck.pop());
+        
+        document.getElementById('player-hand').innerHTML = '';
+        document.getElementById('bot-hand').innerHTML = '';
+        document.getElementById('community').innerHTML = '';
+        
+        pHand.forEach(c => document.getElementById('player-hand').appendChild(createCard(c)));
+        bHand.forEach(() => document.getElementById('bot-hand').appendChild(createCard(null, true)));
+        
+        updateUI(true);
+        document.getElementById('status').innerText = "แจกไพ่แล้ว... สู้หรือหมอบ?";
+    }
+
+    function createCard(card, isBack = false) {
+        const div = document.createElement('div');
+        div.className = `card ${isBack ? 'back' : ('HD'.includes(card.s) ? 'red' : '')}`;
+        if (!isBack) div.innerHTML = `<div>${card.r}</div><div>${SUITS[card.s]}</div>`;
+        return div;
+    }
+
+    function action(type) {
+        let amt = 0;
+        if (type === 'fold') { document.getElementById('status').innerText = "คุณหมอบ!"; return endRound(); }
+        if (type === 'bet') { amt = parseInt(document.getElementById('bet-amount').value); if(amt > balance) amt = balance; }
+        if (type === 'allin') { amt = balance; }
+
+        balance -= amt; pot += (amt * 2);
+        phase++;
+        const area = document.getElementById('community');
+        
+        if (phase === 1) for(let i=0; i<3; i++) area.appendChild(createCard(comm[i]));
+        else if (phase === 2) area.appendChild(createCard(comm[3]));
+        else if (phase === 3) { area.appendChild(createCard(comm[4])); showdown(); return; }
+        
+        updateUI(true);
+    }
+
+    function showdown() {
+        document.getElementById('bot-hand').innerHTML = '';
+        bHand.forEach(c => document.getElementById('bot-hand').appendChild(createCard(c)));
+        const pS = Math.max(...pHand.map(c=>c.v)) + (Math.random()*5);
+        const bS = Math.max(...bHand.map(c=>c.v)) + (Math.random()*5);
+        if (pS >= bS) { balance += pot; document.getElementById('status').innerText = `🎉 คุณชนะ! รับ $${pot}`; }
+        else { document.getElementById('status').innerText = "💀 บอทชนะ! คุณเสียเงินเดิมพัน"; }
+        endRound();
+    }
+
+    function endRound() { updateUI(false); }
+
+    function resetGame() {
+        if(confirm("เริ่มเกมใหม่และรีเซ็ตเงินเป็น $1000?")) {
+            balance = 1000; pot = 0; endRound();
+            document.getElementById('status').innerText = "รีเซ็ตแล้ว เริ่มตาใหม่เลย!";
+        }
+    }
+
+    function updateUI(playing) {
+        document.getElementById('balance').innerText = balance;
+        document.getElementById('pot').innerText = pot;
+        document.getElementById('btn-start').style.display = playing ? 'none' : 'inline-block';
+        document.getElementById('btn-restart').style.display = playing ? 'none' : 'inline-block';
+        document.getElementById('btn-check').style.display = playing ? 'inline-block' : 'none';
+        document.getElementById('btn-bet').style.display = playing ? 'inline-block' : 'none';
+        document.getElementById('btn-allin').style.display = playing ? 'inline-block' : 'none';
+        document.getElementById('btn-fold').style.display = playing ? 'inline-block' : 'none';
+        document.getElementById('bet-area').style.display = playing ? 'block' : 'none';
+    }
+</script>
+</body>
+</html>
